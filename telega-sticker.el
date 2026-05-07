@@ -313,8 +313,9 @@ Return path to png file."
       (let ((convert-cmd
              (telega-docker-exec-cmd
                (format-spec telega-sticker--convert-cmd
-                            (format-spec-make ?p png-filename
-                                              ?w webp-filename))
+                            (format-spec-make
+                             ?p (telega-local-path-export png-filename)
+                             ?w (telega-local-path-export webp-filename)))
                'try-host-cmd-first nil 'no-error)))
         (cond (convert-cmd
                (telega-debug "WEBP -> PNG: %s" convert-cmd)
@@ -830,8 +831,10 @@ If prefix argument is specified, then show trends in Premium stickers."
           (if telega-use-docker
               (telega-docker-exec-cmd
                 (format "sh -c \"gunzip -c '%s' | tgs2png -s 0x%d - | telega-server -E %s\""
-                        (telega--tl-get sticker-file :local :path)
-                        xheight  prefix))
+                        (telega-local-path-export
+                         (telega--tl-get sticker-file :local :path))
+                        xheight
+                        (telega-local-path-export prefix)))
             (format
              "gunzip -c '%s' | %s -s 0x%d - | %s -E %s"
              (telega--tl-get sticker-file :local :path)

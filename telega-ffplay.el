@@ -285,7 +285,8 @@ If fps is not available for FILENAME, then return DEFAULT or \\(30 1\\)."
                        (concat "ffprobe -v error -select_streams v:0 "
                                "-show_entries stream=r_frame_rate "
                                "-of default=noprint_wrappers=1:nokey=1 "
-                               "\"" (expand-file-name filename) "\"")
+                               "\"" (telega-local-path-export
+                                      (expand-file-name filename)) "\"")
                        'try-host-cmd-first)))))
     (if (string-match "\\([0-9]+\\)/\\([0-9]+\\)" fps-ratio)
         (list (string-to-number (match-string 1 fps-ratio))
@@ -300,7 +301,8 @@ If fps is not available for FILENAME, then return DEFAULT or \\(30 1\\)."
       (concat "ffprobe -v error -select_streams v:0 "
               "-show_entries stream=nb_frames "
               "-of default=nokey=1:noprint_wrappers=1 "
-              "\"" (expand-file-name filename) "\"")
+              "\"" (telega-local-path-export
+                     (expand-file-name filename)) "\"")
       'try-host-cmd-first))))
 
 (defun telega-ffplay-get-metadata (filename)
@@ -308,7 +310,8 @@ If fps is not available for FILENAME, then return DEFAULT or \\(30 1\\)."
   (let ((raw-metadata (shell-command-to-string
                        (telega-docker-exec-cmd
                          (concat "ffmpeg -v 0 -i "
-                                 "\"" (expand-file-name filename) "\" "
+                                 "\"" (telega-local-path-export
+                                        (expand-file-name filename)) "\" "
                                  " -f ffmetadata -")
                          'try-host-cmd-first))))
     (delq nil (mapcar (lambda (line)
@@ -324,7 +327,8 @@ If fps is not available for FILENAME, then return DEFAULT or \\(30 1\\)."
       (concat "ffprobe -v error "
               "-show_entries format=duration "
               "-of default=nokey=1:noprint_wrappers=1 "
-              "\"" (expand-file-name filename) "\"")
+              "\"" (telega-local-path-export
+                     (expand-file-name filename)) "\"")
       'try-host-cmd-first))))
 
 (defun telega-ffplay-get-resolution (filename)
@@ -336,7 +340,8 @@ otherwise."
                    (concat "ffprobe -v error "
                            "-show_entries stream=width,height "
                            "-of default=nokey=1:noprint_wrappers=1 "
-                           "\"" (expand-file-name filename) "\"")
+                           "\"" (telega-local-path-export
+                                  (expand-file-name filename)) "\"")
                    'try-host-cmd-first))))
     (when (string-match "\\([0-9]+\\)\n\\([0-9]+\\)" raw-res)
       (cons (string-to-number (match-string 1 raw-res))
@@ -438,7 +443,7 @@ PNGEXT-ARGS is a string for additional arguments to pngextractor."
                     (when ffmpeg-args
                       (concat " " ffmpeg-args))))
            (pngext-cmd-args
-            (concat "-E " prefix
+            (concat "-E " (telega-local-path-export prefix)
                     (when pngext-args
                       (concat " " pngext-args))))
            (shell-cmd

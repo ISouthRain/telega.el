@@ -175,16 +175,33 @@ Set `telega-server-libs-prefix' to the TDLib installion path"
   "Create command to start `telega-server' progress.
 FLAGS - additional.
 Raise error if not found."
-  (mapconcat #'identity
-             (cons
-              (if telega-use-docker
-                  (telega-docker-run-cmd telega-server-command)
-                (let ((exec-path (cons telega-directory exec-path)))
-                  (or (executable-find telega-server-command)
-                      (error "`%s' not found in exec-path"
-                             telega-server-command))))
-              flags)
-             " "))
+  (let ((flags (delq nil flags)))
+    (if (and telega-use-docker
+             (telega-docker--windows-p))
+        (let ((path-flag-p nil))
+          (mapconcat
+           #'identity
+           (cons (telega-docker-run-cmd telega-server-command)
+                 (mapcar (lambda (flag)
+                           (prog1
+                               (shell-quote-argument
+                                (if path-flag-p
+                                    (telega-local-path-export flag)
+                                  flag))
+                             (setq path-flag-p (equal flag "-l"))))
+                         flags))
+           " "))
+      (mapconcat
+       #'identity
+       (cons
+        (if telega-use-docker
+            (telega-docker-run-cmd telega-server-command)
+          (let ((exec-path (cons telega-directory exec-path)))
+            (or (executable-find telega-server-command)
+                (error "`%s' not found in exec-path"
+                       telega-server-command))))
+        flags)
+       " "))))
 
 (defun telega-server-version ()
   "Return telega-server version."
@@ -253,9 +270,10 @@ Return parsed command."
               (set-buffer-multibyte t)
               (telega-server--parse-cmd))
 
-          (let ((value (read (current-buffer))))
+          (let ((value (telega--tl-import-local-paths
+                        (telega--tl-unpack (read (current-buffer))))))
             (prog1
-                (list cmd (telega--tl-unpack value))
+                (list cmd value)
               (delete-region (point-min) (point))
 
               ;; remove trailing newline
@@ -491,7 +509,8 @@ Used to optimize events processing in the `telega-server--parse-commands'."
   (let* ((print-circle nil)
          (print-level nil)
          (print-length nil)
-         (sexp-packed (telega--tl-pack sexp))
+         (sexp-packed (telega--tl-export-local-paths
+                       (telega--tl-pack sexp)))
          (value (prin1-to-string sexp-packed))
          (proc (telega-server--proc)))
     (cl-assert (process-live-p proc) nil "telega-server is not running")
